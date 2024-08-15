@@ -307,8 +307,12 @@ pub trait StreamContext: Context {
 }
 
 pub trait HttpContext: Context {
-    fn on_http_request_headers(&mut self, _num_headers: usize, _end_of_stream: bool) -> Action {
-        Action::Continue
+    fn on_http_request_headers(
+        &mut self,
+        _num_headers: usize,
+        _end_of_stream: bool,
+    ) -> HeaderAction {
+        HeaderAction::Continue
     }
 
     fn get_http_request_headers(&self) -> Vec<(String, String)> {
@@ -351,8 +355,8 @@ pub trait HttpContext: Context {
         hostcalls::add_map_value_bytes(MapType::HttpRequestHeaders, name, value).unwrap()
     }
 
-    fn on_http_request_body(&mut self, _body_size: usize, _end_of_stream: bool) -> Action {
-        Action::Continue
+    fn on_http_request_body(&mut self, _body_size: usize, _end_of_stream: bool) -> DataAction {
+        DataAction::Continue
     }
 
     fn get_http_request_body(&self, start: usize, max_size: usize) -> Option<Bytes> {
@@ -415,8 +419,12 @@ pub trait HttpContext: Context {
         hostcalls::reset_http_request().unwrap()
     }
 
-    fn on_http_response_headers(&mut self, _num_headers: usize, _end_of_stream: bool) -> Action {
-        Action::Continue
+    fn on_http_response_headers(
+        &mut self,
+        _num_headers: usize,
+        _end_of_stream: bool,
+    ) -> HeaderAction {
+        HeaderAction::Continue
     }
 
     fn get_http_response_headers(&self) -> Vec<(String, String)> {
@@ -459,8 +467,8 @@ pub trait HttpContext: Context {
         hostcalls::add_map_value_bytes(MapType::HttpResponseHeaders, name, value).unwrap()
     }
 
-    fn on_http_response_body(&mut self, _body_size: usize, _end_of_stream: bool) -> Action {
-        Action::Continue
+    fn on_http_response_body(&mut self, _body_size: usize, _end_of_stream: bool) -> DataAction {
+        DataAction::Continue
     }
 
     fn get_http_response_body(&self, start: usize, max_size: usize) -> Option<Bytes> {

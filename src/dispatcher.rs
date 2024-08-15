@@ -330,7 +330,7 @@ impl Dispatcher {
         context_id: u32,
         num_headers: usize,
         end_of_stream: bool,
-    ) -> Action {
+    ) -> HeaderAction {
         if let Some(http_stream) = self.http_streams.borrow_mut().get_mut(&context_id) {
             self.active_id.set(context_id);
             http_stream.on_http_request_headers(num_headers, end_of_stream)
@@ -344,7 +344,7 @@ impl Dispatcher {
         context_id: u32,
         body_size: usize,
         end_of_stream: bool,
-    ) -> Action {
+    ) -> DataAction {
         if let Some(http_stream) = self.http_streams.borrow_mut().get_mut(&context_id) {
             self.active_id.set(context_id);
             http_stream.on_http_request_body(body_size, end_of_stream)
@@ -367,7 +367,7 @@ impl Dispatcher {
         context_id: u32,
         num_headers: usize,
         end_of_stream: bool,
-    ) -> Action {
+    ) -> HeaderAction {
         if let Some(http_stream) = self.http_streams.borrow_mut().get_mut(&context_id) {
             self.active_id.set(context_id);
             http_stream.on_http_response_headers(num_headers, end_of_stream)
@@ -381,7 +381,7 @@ impl Dispatcher {
         context_id: u32,
         body_size: usize,
         end_of_stream: bool,
-    ) -> Action {
+    ) -> DataAction {
         if let Some(http_stream) = self.http_streams.borrow_mut().get_mut(&context_id) {
             self.active_id.set(context_id);
             http_stream.on_http_response_body(body_size, end_of_stream)
@@ -635,7 +635,7 @@ pub extern "C" fn proxy_on_request_headers(
     context_id: u32,
     num_headers: usize,
     end_of_stream: bool,
-) -> Action {
+) -> HeaderAction {
     DISPATCHER.with(|dispatcher| {
         dispatcher.on_http_request_headers(context_id, num_headers, end_of_stream)
     })
@@ -646,7 +646,7 @@ pub extern "C" fn proxy_on_request_body(
     context_id: u32,
     body_size: usize,
     end_of_stream: bool,
-) -> Action {
+) -> DataAction {
     DISPATCHER
         .with(|dispatcher| dispatcher.on_http_request_body(context_id, body_size, end_of_stream))
 }
@@ -661,7 +661,7 @@ pub extern "C" fn proxy_on_response_headers(
     context_id: u32,
     num_headers: usize,
     end_of_stream: bool,
-) -> Action {
+) -> HeaderAction {
     DISPATCHER.with(|dispatcher| {
         dispatcher.on_http_response_headers(context_id, num_headers, end_of_stream)
     })
@@ -672,7 +672,7 @@ pub extern "C" fn proxy_on_response_body(
     context_id: u32,
     body_size: usize,
     end_of_stream: bool,
-) -> Action {
+) -> DataAction {
     DISPATCHER
         .with(|dispatcher| dispatcher.on_http_response_body(context_id, body_size, end_of_stream))
 }
