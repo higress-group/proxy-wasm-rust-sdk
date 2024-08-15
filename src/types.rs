@@ -40,6 +40,27 @@ pub enum Action {
 #[repr(u32)]
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 #[non_exhaustive]
+pub enum HeaderAction {
+    Continue = 0,
+    StopIteration = 1,
+    ContinueAndEndStream = 2,
+    StopAllIterationAndBuffer = 3,
+    StopAllIterationAndWatermark = 4,
+}
+
+#[repr(u32)]
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
+#[non_exhaustive]
+pub enum DataAction {
+    Continue = 0,
+    StopIterationAndBuffer = 1,
+    StopIterationAndWatermark = 2,
+    StopIterationNoBuffer = 3,
+}
+
+#[repr(u32)]
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
+#[non_exhaustive]
 pub enum Status {
     Ok = 0,
     NotFound = 1,
