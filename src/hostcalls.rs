@@ -752,6 +752,81 @@ pub fn send_grpc_response(
 }
 
 extern "C" {
+    fn proxy_redis_init(
+        upstream_data: *const u8,
+        upstream_size: usize,
+        username_data: *const u8,
+        username_size: usize,
+        password_data: *const u8,
+        password_size: usize,
+        timeout: u32,
+    ) -> Status;
+}
+
+pub fn redis_init(
+    upstream: &str,
+    password: Option<&[u8]>,
+    timeout: Duration,
+) -> Result<(), Status> {
+    unsafe {
+        match proxy_redis_init(
+            upstream.as_ptr(),
+            upstream.len(),
+            null(),
+            0,
+            password.map_or(null(), |password| password.as_ptr()),
+            password.map_or(0, |password| password.len()),
+            timeout.as_millis() as u32,
+        ) {
+            Status::Ok => Ok(()),
+            Status::BadArgument => Err(Status::BadArgument),
+            Status::InternalFailure => Err(Status::InternalFailure),
+            status => panic!("unexpected status: {}", status as u32),
+        }
+    }
+}
+
+extern "C" {
+    fn proxy_redis_call(
+        upstream_data: *const u8,
+        upstream_size: usize,
+        username_data: *const u8,
+        username_size: usize,
+        password_data: *const u8,
+        password_size: usize,
+        timeout: u32,
+        return_token: *mut u32,
+    ) -> Status;
+}
+
+pub fn dispatch_redis_call(
+    upstream: &str,
+    password: Option<&[u8]>,
+    timeout: Duration,
+) -> Result<u32, Status> {
+    let mut return_token: u32 = 0;
+    unsafe {
+        match proxy_redis_call(
+            upstream.as_ptr(),
+            upstream.len(),
+            null(),
+            0,
+            password.map_or(null(), |password| password.as_ptr()),
+            password.map_or(0, |password| password.len()),
+            timeout.as_millis() as u32,
+            &mut return_token,
+        ) {
+            Status::Ok => {
+                dispatcher::register_redis_callout(return_token);
+                Ok(return_token)
+            }
+            Status::BadArgument => Err(Status::BadArgument),
+            Status::InternalFailure => Err(Status::InternalFailure),
+            status => panic!("unexpected status: {}", status as u32),
+        }
+    }
+}
+extern "C" {
     fn proxy_http_call(
         upstream_data: *const u8,
         upstream_size: usize,

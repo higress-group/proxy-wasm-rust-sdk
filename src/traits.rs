@@ -113,7 +113,11 @@ pub trait Context {
     fn get_http_call_response_trailer_bytes(&self, name: &str) -> Option<Bytes> {
         hostcalls::get_map_value_bytes(MapType::HttpCallResponseTrailers, name).unwrap()
     }
+    fn on_redis_call_response(&self, _token_id: u32, _status: usize, _response_size: usize) {}
 
+    fn get_redis_call_response(&self, start: usize, max_size: usize) -> Option<Bytes> {
+        hostcalls::get_buffer(BufferType::RedisCallResponse, start, max_size).unwrap()
+    }
     fn dispatch_grpc_call(
         &self,
         upstream_name: &str,
