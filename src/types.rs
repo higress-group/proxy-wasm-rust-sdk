@@ -102,6 +102,8 @@ pub enum BufferType {
     GrpcReceiveBuffer = 5,
     VmConfiguration = 6,
     PluginConfiguration = 7,
+    CallData = 8,
+    RedisCallResponse = 9,
 }
 
 #[repr(u32)]

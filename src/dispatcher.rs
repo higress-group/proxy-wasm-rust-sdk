@@ -47,6 +47,10 @@ pub(crate) fn register_grpc_stream(token_id: u32) {
     DISPATCHER.with(|dispatcher| dispatcher.register_grpc_stream(token_id));
 }
 
+pub(crate) fn register_redis_callout(token_id: u32) {
+    DISPATCHER.with(|dispatcher| dispatcher.register_redis_callout(token_id));
+}
+
 struct NoopRoot;
 
 impl Context for NoopRoot {}
@@ -63,6 +67,7 @@ struct Dispatcher {
     callouts: RefCell<HashMap<u32, u32>>,
     grpc_callouts: RefCell<HashMap<u32, u32>>,
     grpc_streams: RefCell<HashMap<u32, u32>>,
+    redis_callouts: RefCell<HashMap<u32, u32>>,
 }
 
 impl Dispatcher {
@@ -78,6 +83,7 @@ impl Dispatcher {
             callouts: RefCell::new(HashMap::new()),
             grpc_callouts: RefCell::new(HashMap::new()),
             grpc_streams: RefCell::new(HashMap::new()),
+            redis_callouts: RefCell::new(HashMap::new()),
         }
     }
 
@@ -118,6 +124,17 @@ impl Dispatcher {
     fn register_grpc_callout(&self, token_id: u32) {
         if self
             .grpc_callouts
+            .borrow_mut()
+            .insert(token_id, self.active_id.get())
+            .is_some()
+        {
+            panic!("duplicate token_id")
+        }
+    }
+
+    fn register_redis_callout(&self, token_id: u32) {
+        if self
+            .redis_callouts
             .borrow_mut()
             .insert(token_id, self.active_id.get())
             .is_some()
@@ -427,6 +444,27 @@ impl Dispatcher {
         }
     }
 
+    fn on_redis_call_response(&self, token_id: u32, status: usize, response_size: usize) {
+        let context_id = self
+            .redis_callouts
+            .borrow_mut()
+            .remove(&token_id)
+            .expect("invalid token_id");
+        if let Some(http_stream) = self.http_streams.borrow_mut().get_mut(&context_id) {
+            self.active_id.set(context_id);
+            hostcalls::set_effective_context(context_id).unwrap();
+            http_stream.on_redis_call_response(token_id, status, response_size)
+        } else if let Some(stream) = self.streams.borrow_mut().get_mut(&context_id) {
+            self.active_id.set(context_id);
+            hostcalls::set_effective_context(context_id).unwrap();
+            stream.on_redis_call_response(token_id, status, response_size)
+        } else if let Some(root) = self.roots.borrow_mut().get_mut(&context_id) {
+            self.active_id.set(context_id);
+            hostcalls::set_effective_context(context_id).unwrap();
+            root.on_redis_call_response(token_id, status, response_size)
+        }
+    }
+
     fn on_grpc_receive_initial_metadata(&self, token_id: u32, headers: u32) {
         let context_id = match self.grpc_streams.borrow_mut().get(&token_id) {
             Some(id) => *id,
@@ -693,6 +731,16 @@ pub extern "C" fn proxy_on_http_call_response(
     DISPATCHER.with(|dispatcher| {
         dispatcher.on_http_call_response(token_id, num_headers, body_size, num_trailers)
     })
+}
+
+#[no_mangle]
+pub extern "C" fn proxy_on_redis_call_response(
+    _context_id: u32,
+    token_id: u32,
+    status: usize,
+    response_size: usize,
+) {
+    DISPATCHER.with(|dispatcher| dispatcher.on_redis_call_response(token_id, status, response_size))
 }
 
 #[no_mangle]
